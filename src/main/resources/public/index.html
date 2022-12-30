@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weshare</title>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div id="app"></div>
+<script id="default-template" type="text/handlebars-template">
+    <h1>WeShare</h1>
+    <br />   
+    <p>You are not logged in!</p>
+    <div>
+        <form id="login-form"">
+            <label for="email">Enter your email</label>
+            <input name="email" id="email" type="email" autofocus required>
+            <input id="submit" type="submit" value="Login"/>
+        </form>
+    </div>
+</script>
+
+<script id="expenses-template" type="text/handlebars-template">
+    {{> navPartial}}
+    <div>
+        <section class="expenseList">
+            <h2>My Expenses</h2>
+            <a id="add_expense" href="#/newexpense">Add a new expense</a><br/>
+            {{#unless expenses}}
+              <p id="no_expenses">You don't have any expenses!</p>
+            {{/unless}}
+            {{#if expenses}}
+            <table>
+                <tr>
+                    <th>When</th>
+                    <th>What</th>
+                    <th>Amount Spent</th>
+                    <th>Payments Requested</th>
+                    <th>Payment Received</th>
+                    <th>Nett Expense</th>
+                </tr>
+                {{#each expenses}}
+                <tr>
+                    <td>{{this.date}}</td>
+                    <td><a href="#/paymentrequest/{{this.expenseId}}">{{this.description}}</a></td>
+                    <td>{{zarformatter this.amount}}</td>
+                    <td>{{zarformatter this.totalPaymentsRequested}}</td>
+                    <td>{{zarformatter this.totalPaymentsReceived}}</td>
+                    <td>{{zarformatter this.nettAmount}}</td>
+                </tr>
+                {{/each}}
+                <tr>
+                    <tfoot>
+                    <td  colspan="5">Total Expenses</td>
+                    <td id="grand_total" >{{totalExpense expenses}}</td>
+                    </tfoot>
+                </tr>
+            </table>
+        {{/if}}
+        </section>
+    </div>
+</script> 
+
+<script id="paymentrequests_sent-template" type="text/handlebars-template">
+    {{> navPartial}}
+    <div>
+        <h2>People that owe me</h2>
+        {{#unless sentPaymentRequest}}
+        <p id="no_payment_requests_sent" >Nobody owes you anything!</p>
+        {{/unless}}
+        {{#if sentPaymentRequest}}
+        <div id="payments">
+            <div>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Who</th>
+                        <th>What</th>
+                        <th>Due in (days)</th>
+                        <th>How much</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <th>
+                        {{#each sentPaymentRequest}}
+                        <tr>
+                            <td><p><span>{{getPeopleName this.toPersonId}}</span></p></td>
+                            <td><p><span>{{getExpenseDescription this.expenseId}}</span></p></td>
+                            <td><p><span>{{dueDate this.date true}}</span></p></td>
+                            <td><p><span>{{zarformatter this.amount}}</span></p></td>
+                        </tr>
+                        {{/each}}
+                    </th>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td><p><span></span>Total unpaid</p></td>
+                        <td><p><span></span></p></td>
+                        <td><p><span></span></p></td>
+                        <td><p><span id="grand_total">{{totalUnpaid sentPaymentRequest}}</span></p></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        {{/if}}
+    </div>
+</script>
+
+<script id="paymentRequestReceived-template" type="text/handlebars-template">
+    {{> navPartial}}
+    <div>
+        <section class="paymentRequestsReceived">
+            <h2>People that you owe</h2>
+            {{#unless paymentRequestReceived}}
+            <p id="no_payment_requests_received">You don't owe anyone anything!</p>
+            {{/unless}}
+            {{#if paymentRequestReceived}}
+            <div id = "payment_requests_recieved">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Who</th>
+                        <th>What</th>
+                        <th>Due in (Days)</th>
+                        <th>How Much</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <th>
+                        {{#each paymentRequestReceived}}
+                        <tr>
+                            <td><p><span>{{getPeopleName this.fromPersonId}}</span></p></td>
+                            <td><p><span>{{getExpenseDescription this.expenseId}} </span></p></td>
+                            <td><p><span>{{dueDate this.date true}} </span></p></td>
+                            <td><p><span>{{zarformatter this.amount}} </span></p></td>
+                            <td>
+                                {{#if this.isPaid}}
+                                <div>
+                                    <input id="paid_1" type="checkbox" checked>
+                                </div>
+                                {{else}}
+                                <div>
+                                    <form id="pay-form" method="" action="">
+                                        <input type="hidden" value={{this.expenseId}} id="expenseId" name="expenseId">
+                                        <input type="hidden" value={{this.id}} id="requestId" name="requestId">
+                                        <input id="submit" type="submit" value="Pay"/>
+                                    </form>
+                                </div>
+                                {{/if}}
+                            </td>
+                        </tr>
+                        {{/each}}
+                        </th:block>
+                    </tbody>
+                    <tfoot>
+                    <td><p><span>Total unpaid </span></p></td>
+                    <td><p><span > </span></p></td>
+                    <td><p><span> </span></p></td>
+                    <td><p><span id="grand_total" >{{totalUnpaid paymentRequestReceived}}</span></p></td>
+                    <td></td>
+                    </tfoot>
+                </table>
+            </div>
+            {{/if}}
+        </section>
+    </div>
+</script>
+
+<script id="newexpense-tamplate" type="text/handlebars-template">
+    {{> navPartial}} 
+   <div>
+    <section class="expenseList">
+        <div>
+            <form id="expense-form" method="" action="">
+                <label for="Description">Description</label>
+                <input name="description" id="description" type="text" autofocus required>
+                <label for="date">Date(dd/mm/yyyy e.g 21/10/2021)</label>
+                <input name="date" id="date" type="date" autofocus required>
+                <label for="amount">Amount(no cents allowed)</label>
+                <input name="amount" id="amount" type="text" autofocus required>
+                <input id="submit" type="submit" value="Submit"/>
+            </form>
+        </div>
+    </section>
+</div>
+</script>
+
+<script id="paymentrequest-template" type="text/handlebars-template">
+    {{> navPartial}} 
+    <div>
+        <section class="expenseList">
+            <h2>Submit a payment request for the following expense</h2>
+            <table>
+                <tr>
+                    <td  colspan="2">Date</td>
+                    <td id="expense_date">{{expenses.date}}</td>
+                </tr>
+                <tr>
+                    <td  colspan="2">Description</td>
+                    <td id="expense_description" >{{expenses.description}}</td>
+                </tr>
+                <tr>
+                    <td  colspan="2">Amount</td>
+                    <td id="expense_amount" >{{zarformatter expenses.amount}}</td>
+                </tr>
+            </table>
+            {{#if payrequestForExpense}}
+            <div>
+                <h2>Previous Payment Requests for this expense</h2>
+                <table>
+                    <tr>
+                        <th>Who</th>
+                        <th>Due</th>
+                        <th>Paid</th>
+                        <th>How Much</th>
+                    </tr>
+                    {{#each payrequestForExpense}}
+                    <tr>
+                        <td>{{getPeopleName this.toPersonId}}</td>
+                        <td>{{this.date}}</td>
+                        <td>{{yesOrNo this.isPaid}}</td>
+                        <td>{{zarformatter this.amount}}</td>
+                    </tr>
+                    {{/each}}
+                    <tfoot>
+                        <tr>
+                           <td  colspan="3">Total Amount of Payments Requested</td>
+                           <td>{{paymentRequestsUnpaid payrequestForExpense}}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+            </div>
+            {{/if}}
+            <form id="form-paymentrequest" method="" action="">
+                <input type="hidden" value="{{expenses.expenseId}}" id="expenseId" name="expenseId">
+                <label for="email">The email address of the person that should pay you</label>
+                <input name="email" id="email" type="email" autofocus required>
+                <label for="amount">The amount they should pay(maximum {{toBePayByYou payrequestForExpense expenses.amount}}</b>)</label>
+                <input name="amount" id="amount" type="number" autofocus required>
+                <label for="date">By when must this claim be settled (dd/mm/yyyy)</label>
+                <input name="date" id="due_date" type="date" autofocus required>
+                <input id="submit" type="submit" value="Submit"/>
+            </form>
+        </section>
+</div>
+</script>
+
+<script id="overdue_paymentrequests-template" type="text/handlebars-template">
+    {{> navPartial}}      
+    <div>
+        <section class="paymentRequestsOverdue">
+            <h2>OverDue Payments</h2>
+            {{#unless sentPaymentRequest}}
+            <p id="no_payment_requests_received">No Payment OverDue!</p>
+            {{/unless}}
+            {{#if sentPaymentRequest}}
+            <div id = "payment_requests_recieved">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Who</th>
+                            <th>What</th>
+                            <th>Due in (Days)</th>
+                            <th>How Much</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <th>
+                            {{#each sentPaymentRequest}}
+                            <tr>
+                                <td><p><span>{{getPeopleName this.toPersonId}}</span></p></td>
+                                <td><p><span>{{getExpenseDescription this.expenseId}} </span></p></td>
+                                <td><p><span>{{dueDate this.date false}} </span></p></td>
+                                <td><p><span>{{zarformatter this.amount}} </span></p></td>
+                                <td>
+                        
+                                    <div>
+                                        <form id="recall-form" method="" action="">
+                                            <input type="hidden" value={{this.expenseId}} id="expenseId" name="expenseId">
+                                            <input type="hidden" value={{this.id}} id="requestId" name="requestId">
+                                            <!-- <input id="submit" type="submit" value="Recall"/> -->
+                                            <button type="submit" form="recall-form" value="Recall">Recall</button>
+                                        </form>
+                                    </div>
+                            
+                                </td>
+                            </tr>
+                            {{/each}}
+                        </th:block>
+                        </tbody>
+                        <tfoot>
+                        <td><p><span>Total unpaid </span></p></td>
+                        <td><p><span > </span></p></td>
+                        <td><p><span> </span></p></td>
+                        <td><p><span id="grand_total" >{{totalUnpaid sentPaymentRequest}}</span></p></td>
+                        <td></td>
+                        </tfoot>
+                    </table>
+                </div> 
+            {{/if}}
+        </section>
+    </div>  
+</script>
+
+<script id="nav-template" type="text/handlebars-template">
+    <h1>WeShare</h1>
+    <p id="user">{{email}}</p>
+    <nav>
+        <a id="expenses" href="#/expenses">Expenses</a>
+        <a id="paymentrequests_sent" href="#/paymentrequests_sent">Payment Requests Sent</a>
+        <a id="paymentrequests_received" href="#/paymentrequests_received">Payment Request Received</a>
+        <a id="paymentrequests_received" href="#/overdue">People OverDue</a>
+        <a href="#/logout" id="logout" >Logout {{getNameFromEmail email}}</a>
+    </nav>
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanilla-router@1.2.8/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+
+</html>
